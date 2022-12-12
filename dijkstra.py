@@ -11,7 +11,6 @@ import ctypes
 import numpy as np
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
-sys.path.append('lib/')
 import utils as ut
 from ctypes import c_void_p
 
@@ -88,45 +87,68 @@ void main()
 }
 """
 
+startNode = 0
+currentNode = 0
+endNode = 1
+
 ## Drawing function.
 #
 # Draws primitive.
 def display():
 
-    gl.glClearColor(0.2, 0.3, 0.3, 1.0)
+    global startNode
+    global currentNode
+    global endNode
+
+    gl.glClearColor(0.1, 0.1, 0.3, 1.0)
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
     gl.glUseProgram(program)
     gl.glBindVertexArray(VAO)
 
-    Rx = ut.matRotateX(np.radians(10.0))
-    Ry = ut.matRotateY(np.radians(-30.0))
-    model=np.matmul(Rx,Ry)
-    loc = gl.glGetUniformLocation(program, "model");
-    gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, model.transpose())
-
+    ## Para o vertex shader:
+    ## Camera settings:
     view = ut.matTranslate(0.0, 0.0, -5.0)
-    loc = gl.glGetUniformLocation(program, "view");
+    loc = gl.glGetUniformLocation(program, "view")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, view.transpose())
     
     projection = ut.matPerspective(np.radians(45.0), win_width/win_height, 0.1, 100.0)
-    loc = gl.glGetUniformLocation(program, "projection");
+    loc = gl.glGetUniformLocation(program, "projection")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, projection.transpose())
 
-    # Object color.
-    loc = gl.glGetUniformLocation(program, "objectColor")
-    gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+    ## Para o fragment shader:
+    ## Light settings:
     # Light color.
     loc = gl.glGetUniformLocation(program, "lightColor")
     gl.glUniform3f(loc, 1.0, 1.0, 1.0)
     # Light position.
     loc = gl.glGetUniformLocation(program, "lightPosition")
     gl.glUniform3f(loc, 1.0, 0.0, 2.0)
-    # Camera position.
+    # Camera position for the shader.
     loc = gl.glGetUniformLocation(program, "cameraPosition")
-    gl.glUniform3f(loc, 0.0, 0.0, 0.0)
+    gl.glUniform3f(loc, 0.0, 0.0, -5.0)
 
-    gl.glDrawArrays(gl.GL_TRIANGLES, 0, 20*3)
+    ## Object settings:
+    for i in range(0, graphSize):
+        # Object pos:
+        # transforma cada instância para a posição no grafo
+        transformer = ut.matTranslate(graphPos[i][0], graphPos[i][1], graphPos[i][2])
+        loc = gl.glGetUniformLocation(program, "model")
+        gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, transformer.transpose())
+
+        # Object color:
+        # obtém a cor dependendo de qual tipo de nó é. (inicial, atual, final, outro)
+        loc = gl.glGetUniformLocation(program, "objectColor")
+        if i == startNode:
+            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+        elif i == currentNode:
+            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+        elif i == endNode:
+            gl.glUniform3f(loc, 0.1, 0.5, 0.1)
+        else:
+            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 20*3)
 
     glut.glutSwapBuffers()
 
@@ -162,6 +184,8 @@ def keyboard(key, x, y):
 
     glut.glutPostRedisplay()
 
+graphPos = [[]]
+graphSize = 1
 
 ## Init vertex data.
 #
@@ -172,28 +196,44 @@ def initData():
     global VAO
     global VBO
 
-    # Set triangle vertices.
-    vertices = myobj.Icosphere
+    global graphPos # Pos dos vértices do grafo
+    global graphSize # Quantidade de vértices do grafo
 
-    # Vertex array.
+    graphSize = 2
+    graphPos = [
+        [0.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0]
+    ]
+    graphWeights = [
+        [0, 1],
+        [1, 0]
+    ]
+
+    # ##########################
+    icospheres = myobj.Icosphere
+
     VAO = gl.glGenVertexArrays(1)
     gl.glBindVertexArray(VAO)
 
-    # Vertex buffer
     VBO = gl.glGenBuffers(1)
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, VBO)
-    gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices.nbytes, vertices, gl.GL_STATIC_DRAW)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, icospheres.nbytes, icospheres, gl.GL_STATIC_DRAW)
     
     # Set attributes.
-    gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*vertices.itemsize, None)
+    # Pos
+    gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*icospheres.itemsize, None)
     gl.glEnableVertexAttribArray(0)
-    gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*vertices.itemsize, c_void_p(3*vertices.itemsize))
+    # Normal
+    gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*icospheres.itemsize, c_void_p(3*icospheres.itemsize))
     gl.glEnableVertexAttribArray(1)
-    
+
+    ##########################
+
     # Unbind Vertex Array Object.
     gl.glBindVertexArray(0)
 
-    gl.glEnable(gl.GL_DEPTH_TEST);
+    gl.glEnable(gl.GL_DEPTH_TEST)
+
 
 ## Create program (shaders).
 #
@@ -215,7 +255,7 @@ def main():
     glut.glutInitContextProfile(glut.GLUT_CORE_PROFILE);
     glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
     glut.glutInitWindowSize(win_width,win_height)
-    glut.glutCreateWindow('Phong')
+    glut.glutCreateWindow('Dijkstra 3D')
 
     # Init vertex data for the triangle.
     initData()

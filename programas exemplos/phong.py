@@ -11,7 +11,6 @@ import ctypes
 import numpy as np
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
-sys.path.append('../lib/')
 import utils as ut
 from ctypes import c_void_p
 
@@ -86,6 +85,9 @@ void main()
 }
 """
 
+colorx = [1.0, 0.1, 0.1]
+colorflag = 0
+
 ## Drawing function.
 #
 # Draws primitive.
@@ -97,23 +99,28 @@ def display():
     gl.glUseProgram(program)
     gl.glBindVertexArray(VAO)
 
+    # Model
     Rx = ut.matRotateX(np.radians(10.0))
     Ry = ut.matRotateY(np.radians(-30.0))
     model=np.matmul(Rx,Ry)
     loc = gl.glGetUniformLocation(program, "model");
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, model.transpose())
 
+    # View
     view = ut.matTranslate(0.0, 0.0, -5.0)
     loc = gl.glGetUniformLocation(program, "view");
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, view.transpose())
     
+    # Projection
     projection = ut.matPerspective(np.radians(45.0), win_width/win_height, 0.1, 100.0)
     loc = gl.glGetUniformLocation(program, "projection");
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, projection.transpose())
 
+    global colorx
+
     # Object color.
     loc = gl.glGetUniformLocation(program, "objectColor")
-    gl.glUniform3f(loc, 0.5, 0.1, 0.1)
+    gl.glUniform3f(loc, colorx[0], colorx[1], colorx[2])
     # Light color.
     loc = gl.glGetUniformLocation(program, "lightColor")
     gl.glUniform3f(loc, 1.0, 1.0, 1.0)
@@ -152,11 +159,18 @@ def reshape(width,height):
 # @param y Mouse y coordinate when key pressed.
 def keyboard(key, x, y):
 
-    global type_primitive
-    global mode
+    global colorx
+    global colorflag
 
     if key == b'\x1b'or key == b'q':
         glut.glutLeaveMainLoop()
+    if key == b'f':
+        if(colorflag == 0):
+            colorx = [0.5, 0.1, 0.5]
+            colorflag = 1
+        else:
+            colorx = [1.0, 0.1, 0.1]
+            colorflag = 0
 
     glut.glutPostRedisplay()
 

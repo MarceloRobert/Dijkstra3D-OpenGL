@@ -15,6 +15,7 @@ import utils as ut
 from ctypes import c_void_p
 
 import objects as myobj
+import graph as mygraph
 
 
 ## Window width.
@@ -140,11 +141,11 @@ def display():
         # obtém a cor dependendo de qual tipo de nó é. (inicial, atual, final, outro)
         loc = gl.glGetUniformLocation(program, "objectColor")
         if i == startNode:
-            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
-        elif i == currentNode:
-            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
-        elif i == endNode:
             gl.glUniform3f(loc, 0.1, 0.5, 0.1)
+        elif i == currentNode:
+            gl.glUniform3f(loc, 0.1, 0.1, 0.5)
+        elif i == endNode:
+            gl.glUniform3f(loc, 0.5, 0.1, 0.1)
         else:
             gl.glUniform3f(loc, 0.5, 0.5, 0.1)
 
@@ -199,18 +200,50 @@ def initData():
     global graphPos # Pos dos vértices do grafo
     global graphSize # Quantidade de vértices do grafo
 
-    graphSize = 2
-    graphPos = [
-        [0.0, 0.0, 0.0],
-        [1.0, 1.0, 1.0]
-    ]
-    graphWeights = [
-        [0, 1],
-        [1, 0]
-    ]
+    graphSize = mygraph.GrafoLen
+    graphPos = mygraph.Grafo
+    graphWeights = mygraph.GrafoWeights
 
     # ##########################
-    icospheres = myobj.Icosphere
+    icospheres = np.array([
+        # coordinate       # normal
+        -0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
+         0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
+         0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
+        -0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
+         0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
+        -0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
+         0.1, -0.1,  0.1,  1.0,  0.0,  0.0, 
+         0.1, -0.1, -0.1,  1.0,  0.0,  0.0,
+         0.1,  0.1, -0.1,  1.0,  0.0,  0.0,
+         0.1, -0.1,  0.1,  1.0,  0.0,  0.0,
+         0.1,  0.1, -0.1,  1.0,  0.0,  0.0,
+         0.1,  0.1,  0.1,  1.0,  0.0,  0.0,
+         0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
+        -0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
+        -0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
+         0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
+        -0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
+         0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
+        -0.1, -0.1, -0.1, -1.0,  0.0,  0.0,
+        -0.1, -0.1,  0.1, -1.0,  0.0,  0.0,
+        -0.1,  0.1,  0.1, -1.0,  0.0,  0.0,
+        -0.1, -0.1, -0.1, -1.0,  0.0,  0.0,
+        -0.1,  0.1,  0.1, -1.0,  0.0,  0.0,
+        -0.1,  0.1, -0.1, -1.0,  0.0,  0.0,
+        -0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
+         0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
+         0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
+        -0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
+         0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
+        -0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
+        -0.1, -0.1,  0.1,  0.0, -1.0,  0.0,
+        -0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
+         0.1, -0.1,  0.1,  0.0, -1.0,  0.0,
+        -0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
+         0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
+         0.1, -0.1,  0.1,  0.0, -1.0,  0.0
+    ], dtype='float32')
 
     VAO = gl.glGenVertexArrays(1)
     gl.glBindVertexArray(VAO)

@@ -25,10 +25,12 @@ win_height = 600
 
 ## Program variable.
 program = None
-## Vertex array object.
-VAO = None
-## Vertex buffer object.
-VBO = None
+
+instanceVAO = None
+instanceVBO = None
+graphVAO = None
+graphVBO = None
+graphEBO = None
 
 ## Vertex shader.
 vertex_code = """
@@ -89,8 +91,9 @@ void main()
 """
 
 startNode = 0
-currentNode = 0
-endNode = 1
+currentNode = 1
+endNode = 2
+caminhoNode = []
 
 ## Drawing function.
 #
@@ -100,16 +103,22 @@ def display():
     global startNode
     global currentNode
     global endNode
+    global caminhoNode
+
+    global rotate_inc
 
     gl.glClearColor(0.1, 0.1, 0.3, 1.0)
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-
     gl.glUseProgram(program)
-    gl.glBindVertexArray(VAO)
 
+
+    # Desenha as "instâncias"
+    gl.glBindVertexArray(instanceVAO)
     ## Para o vertex shader:
     ## Camera settings:
-    view = ut.matTranslate(0.0, 0.0, -5.0)
+    Rx = ut.matRotateY(np.radians(0.0+rotate_inc))
+    Mz = ut.matTranslate(0.0, 0.0, -5.0)
+    view = np.matmul(Mz, Rx)
     loc = gl.glGetUniformLocation(program, "view")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, view.transpose())
     
@@ -146,13 +155,37 @@ def display():
             gl.glUniform3f(loc, 0.1, 0.1, 0.5)
         elif i == endNode:
             gl.glUniform3f(loc, 0.5, 0.1, 0.1)
+        elif i in caminhoNode:
+            gl.glUniform3f(loc, 0.5, 0.1, 0.5)
         else:
             gl.glUniform3f(loc, 0.5, 0.5, 0.1)
 
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 20*3)
+    
+
+    # Desenha o grafo
+    gl.glBindVertexArray(graphVAO)
+    gl.glPointSize(5)
+    # Reseta o posicionamento para desenhar o grafo
+    model=np.identity(4)
+    loc = gl.glGetUniformLocation(program, "model")
+    gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, model.transpose())
+
+    gl.glLineWidth(5)
+    gl.glDrawArrays(gl.GL_LINES, 0, 49*4)
 
     glut.glutSwapBuffers()
 
+
+rotate_inc = 0.0
+## Idle function.
+#
+def idle():
+    global rotate_inc
+
+    rotate_inc += 0.5
+
+    glut.glutPostRedisplay()
 
 ## Reshape function.
 # 
@@ -177,11 +210,18 @@ def reshape(width,height):
 # @param y Mouse y coordinate when key pressed.
 def keyboard(key, x, y):
 
-    global type_primitive
-    global mode
+    global currentNode
+    global rotate_inc
 
     if key == b'\x1b'or key == b'q':
         glut.glutLeaveMainLoop()
+    if key == b'f':
+        caminhoNode.append(currentNode)
+        currentNode += 1
+    if key == b'd':
+        rotate_inc += 1
+    if key == b'a':
+        rotate_inc -= 1
 
     glut.glutPostRedisplay()
 
@@ -194,62 +234,40 @@ graphSize = 1
 def initData():
 
     # Uses vertex arrays.
-    global VAO
-    global VBO
+    global instanceVAO
+    global instanceVBO
+    global graphVAO
+    global graphVBO
+    global graphEBO
 
     global graphPos # Pos dos vértices do grafo
     global graphSize # Quantidade de vértices do grafo
 
     graphSize = mygraph.GrafoLen
-    graphPos = mygraph.Grafo
+    graphPos = mygraph.GrafoPos
     graphWeights = mygraph.GrafoWeights
+    graphMesh = mygraph.GrafoMesh
+
+    graphVAO = gl.glGenVertexArrays(1)
+    gl.glBindVertexArray(graphVAO)
+
+    graphVBO = gl.glGenBuffers(1)
+    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, graphVBO)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, graphMesh.nbytes, graphMesh, gl.GL_STATIC_DRAW)
+    
+    # Set attributes.
+    # Pos
+    gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 3*graphMesh.itemsize, None)
+    gl.glEnableVertexAttribArray(0)
 
     # ##########################
-    icospheres = np.array([
-        # coordinate       # normal
-        -0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
-         0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
-         0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
-        -0.1, -0.1,  0.1,  0.0,  0.0,  1.0,
-         0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
-        -0.1,  0.1,  0.1,  0.0,  0.0,  1.0,
-         0.1, -0.1,  0.1,  1.0,  0.0,  0.0, 
-         0.1, -0.1, -0.1,  1.0,  0.0,  0.0,
-         0.1,  0.1, -0.1,  1.0,  0.0,  0.0,
-         0.1, -0.1,  0.1,  1.0,  0.0,  0.0,
-         0.1,  0.1, -0.1,  1.0,  0.0,  0.0,
-         0.1,  0.1,  0.1,  1.0,  0.0,  0.0,
-         0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
-        -0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
-        -0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
-         0.1, -0.1, -0.1,  0.0,  0.0, -1.0,
-        -0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
-         0.1,  0.1, -0.1,  0.0,  0.0, -1.0,
-        -0.1, -0.1, -0.1, -1.0,  0.0,  0.0,
-        -0.1, -0.1,  0.1, -1.0,  0.0,  0.0,
-        -0.1,  0.1,  0.1, -1.0,  0.0,  0.0,
-        -0.1, -0.1, -0.1, -1.0,  0.0,  0.0,
-        -0.1,  0.1,  0.1, -1.0,  0.0,  0.0,
-        -0.1,  0.1, -0.1, -1.0,  0.0,  0.0,
-        -0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
-         0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
-         0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
-        -0.1,  0.1,  0.1,  0.0,  1.0,  0.0,
-         0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
-        -0.1,  0.1, -0.1,  0.0,  1.0,  0.0,
-        -0.1, -0.1,  0.1,  0.0, -1.0,  0.0,
-        -0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
-         0.1, -0.1,  0.1,  0.0, -1.0,  0.0,
-        -0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
-         0.1, -0.1, -0.1,  0.0, -1.0,  0.0,
-         0.1, -0.1,  0.1,  0.0, -1.0,  0.0
-    ], dtype='float32')
+    icospheres = myobj.Cube
 
-    VAO = gl.glGenVertexArrays(1)
-    gl.glBindVertexArray(VAO)
+    instanceVAO = gl.glGenVertexArrays(1)
+    gl.glBindVertexArray(instanceVAO)
 
-    VBO = gl.glGenBuffers(1)
-    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, VBO)
+    instanceVBO = gl.glGenBuffers(1)
+    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, instanceVBO)
     gl.glBufferData(gl.GL_ARRAY_BUFFER, icospheres.nbytes, icospheres, gl.GL_STATIC_DRAW)
     
     # Set attributes.
@@ -260,7 +278,7 @@ def initData():
     gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*icospheres.itemsize, c_void_p(3*icospheres.itemsize))
     gl.glEnableVertexAttribArray(1)
 
-    ##########################
+    # #########################
 
     # Unbind Vertex Array Object.
     gl.glBindVertexArray(0)
@@ -284,8 +302,8 @@ def initShaders():
 def main():
 
     glut.glutInit()
-    glut.glutInitContextVersion(3, 3);
-    glut.glutInitContextProfile(glut.GLUT_CORE_PROFILE);
+    glut.glutInitContextVersion(3, 3)
+    glut.glutInitContextProfile(glut.GLUT_CORE_PROFILE)
     glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
     glut.glutInitWindowSize(win_width,win_height)
     glut.glutCreateWindow('Dijkstra 3D')
@@ -299,6 +317,7 @@ def main():
     glut.glutReshapeFunc(reshape)
     glut.glutDisplayFunc(display)
     glut.glutKeyboardFunc(keyboard)
+    glut.glutIdleFunc(idle)
 
     glut.glutMainLoop()
 

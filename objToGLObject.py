@@ -4,11 +4,13 @@ from math import sqrt
 mode = "graph"
 
 def mutateObject():
-    origem = open("graphTest.obj")
+    origem = open("plane.obj")
     if mode == "graph":
         destino = open("graph.py", "w")
     else:
         destino = open("objects.py", "w")
+    
+    destino.write("import numpy as np\n\n")
 
     vertices = []
     verticesQt = 0
@@ -42,7 +44,6 @@ def mutateObject():
 
     # Get faces
     if mode == "object":
-        destino.write("import numpy as np\n\n")
         destino.write(objName + " = np.array([\n")
 
         buffer = origem.read(2)
@@ -65,10 +66,8 @@ def mutateObject():
             destino.write("], dtype='float32')")
 
     elif mode == "graph":
-        # como não vai renderizar o objeto, não precisa ser np.array, pode ser uma matriz real
-
         # Vertices
-        destino.write(objName + " = [\n")
+        destino.write(objName + "Pos = [\n")
         # Saves vertices into file
         for i in range(0, verticesQt):
             destino.write("\t[")
@@ -83,7 +82,7 @@ def mutateObject():
         destino.write("\n" + objName + "Len = " + str(verticesQt) + "\n")
 
         # Edges
-        destino.write("\n" + objName + "Edges = [\n")
+        destino.write("\n" + objName + "Mesh = np.array([\n")
         edges = []
         edgesQt = 0
         # Get edges
@@ -92,9 +91,17 @@ def mutateObject():
             invalues = origem.readline().strip().split(" ")
             edges.append([int(invalues[0])-1, int(invalues[1])-1])
             buffer = origem.read(2)
-            # Saves edges into file
-            destino.write("\t[" + str(int(invalues[0])-1) + ", " + str(int(invalues[1])-1) + "],\n")
-        destino.write("]\n")
+            # Saves edge into file
+            destino.write("\t")
+            iindex = int(invalues[0])
+            for i in range(0, 3):
+                destino.write(str(vertices[(iindex-1)*3+i]) + ", ")
+            destino.write("\n\t")
+            iindex = int(invalues[1])
+            for i in range(0, 3):
+                destino.write(str(vertices[(iindex-1)*3+i]) + ", ")
+            destino.write("\n")
+        destino.write("], dtype='float32')\n")
 
         # Adjecency Matrix
         destino.write("\n" + objName + "Weights = [\n")

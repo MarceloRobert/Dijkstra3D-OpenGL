@@ -96,6 +96,8 @@ endNode = 2
 caminhoNode = []
 pathAtoB = []
 n1 = 0
+n2 = 0
+flag = False
 
 def dijkstra(graph, start):
     
@@ -147,13 +149,15 @@ def printPath(j):
 #
 # Draws primitive.
 def display():
-
     global startNode
     global currentNode
     global endNode
     global caminhoNode
-
     global rotate_inc
+    global flag
+    global n1
+    global n2
+    global pathAtoB
 
     gl.glClearColor(0.1, 0.1, 0.3, 1.0)
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -164,7 +168,8 @@ def display():
     gl.glBindVertexArray(instanceVAO)
     ## Para o vertex shader:
     ## Camera settings:
-    Rx = ut.matRotateY(np.radians(0.0+rotate_inc))
+
+    Rx = ut.matRotateX(np.radians(0.0+rotate_inc))
     Mz = ut.matTranslate(0.0, 0.0, -10.0)
     view = np.matmul(Mz, Rx)
     loc = gl.glGetUniformLocation(program, "view")
@@ -197,16 +202,18 @@ def display():
         # Object color:
         # obtém a cor dependendo de qual tipo de nó é. (inicial, atual, final, outro)
         loc = gl.glGetUniformLocation(program, "objectColor")
-        if i == startNode:
-            gl.glUniform3f(loc, 0.1, 0.5, 0.1)
-        elif i == currentNode:
-            gl.glUniform3f(loc, 0.1, 0.1, 0.5)
-        elif i == endNode:
-            gl.glUniform3f(loc, 0.5, 0.1, 0.1)
-        elif i in caminhoNode:
-            gl.glUniform3f(loc, 0.5, 0.1, 0.5)
-        else:
-            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+        gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+
+        if(flag):
+            if i == n1:
+                gl.glUniform3f(loc, 0.1, 0.5, 0.1)
+            # elif i == currentNode:
+                # gl.glUniform3f(loc, 0.1, 0.1, 0.5)
+            elif i == n2:
+                gl.glUniform3f(loc, 0.5, 0.1, 0.1)
+            elif i in caminhoNode:
+                gl.glUniform3f(loc, 0.5, 0.1, 0.5)
+            
 
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 20*3)
     
@@ -258,29 +265,41 @@ def reshape(width,height):
 # @param y Mouse y coordinate when key pressed.
 def keyboard(key, x, y):
 
+    global caminhoNode
     global currentNode
     global rotate_inc
+    global n1
+    global n2
+    global flag
 
     if key == b'\x1b'or key == b'q':
         glut.glutLeaveMainLoop()
-    if key == b'f':
-        caminhoNode.append(currentNode)
-        currentNode += 1
     if key == b'd':
         rotate_inc += 1
     if key == b'a':
         rotate_inc -= 1
     if key == b'h':
+        n1 = int(input('Nó de origem: '))
+        dijkstra(mygraph.GrafoWeights, n1)
+
         n2 = int(input('Nó de destino: '))
         printPath(n2)
+
         print("(Falta animar essa parte)")
         print("Caminho da origem até destinho:")
         print(pathAtoB)
+        caminhoNode = pathAtoB
+
+        flag = True
+        display()
 
     glut.glutPostRedisplay()
 
 graphPos = [[]]
 graphSize = 1
+
+#def animacao(origem, destino)
+
 
 ## Init vertex data.
 #
@@ -354,15 +373,6 @@ def initShaders():
 #
 # Init GLUT and the window settings. Also, defines the callback functions used in the program.
 def main():
-    global n1
-    global pathAtoB
-
-    n1 = int(input('Nó de origem: '))
-    #pathAtoB.append(n1)
-    dijkstra(mygraph.GrafoWeights, n1)
-
-    print("Pressione 'h' para definir um nó destino e ver o caminho.")
-
     glut.glutInit()
     glut.glutInitContextVersion(3, 3)
     glut.glutInitContextProfile(glut.GLUT_CORE_PROFILE)

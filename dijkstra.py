@@ -94,6 +94,54 @@ startNode = 0
 currentNode = 1
 endNode = 2
 caminhoNode = []
+pathAtoB = []
+n1 = 0
+
+def dijkstra(graph, start):
+    
+    # Inicialização dos vectors
+    distances = [float("inf") for _ in range(len(graph))]
+    visited = [False for _ in range(len(graph))]
+    distances[start] = 0
+
+    # Esse vector guarda o caminho
+    global parents 
+    parents = [float(-1) for _ in range(len(graph))]
+
+    # Dijkstra
+    while True:
+
+        shortest_distance = float("inf")
+        shortest_index = -1
+        for i in range(len(graph)):
+            if distances[i] < shortest_distance and not visited[i]:
+                shortest_distance = distances[i]
+                shortest_index = i
+
+        if shortest_index == -1:
+            return distances
+
+        for i in range(len(graph[shortest_index])):
+            if graph[shortest_index][i] != 0 and distances[i] > distances[shortest_index] + graph[shortest_index][i]:
+                parents[i] = shortest_index
+                distances[i] = distances[shortest_index] + graph[shortest_index][i]
+
+        visited[shortest_index] = True
+
+# Print do caminho
+def printPath(j):
+    global n1
+    global pathAtoB
+
+    pathAtoB.clear()
+    pathAtoB.append(n1)
+
+    if parents[j] == -1:
+        return
+    
+    printPath(parents[j])
+
+    pathAtoB.append(j)
 
 ## Drawing function.
 #
@@ -117,7 +165,7 @@ def display():
     ## Para o vertex shader:
     ## Camera settings:
     Rx = ut.matRotateY(np.radians(0.0+rotate_inc))
-    Mz = ut.matTranslate(0.0, 0.0, -5.0)
+    Mz = ut.matTranslate(0.0, 0.0, -10.0)
     view = np.matmul(Mz, Rx)
     loc = gl.glGetUniformLocation(program, "view")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, view.transpose())
@@ -222,6 +270,12 @@ def keyboard(key, x, y):
         rotate_inc += 1
     if key == b'a':
         rotate_inc -= 1
+    if key == b'h':
+        n2 = int(input('Nó de destino: '))
+        printPath(n2)
+        print("(Falta animar essa parte)")
+        print("Caminho da origem até destinho:")
+        print(pathAtoB)
 
     glut.glutPostRedisplay()
 
@@ -300,6 +354,14 @@ def initShaders():
 #
 # Init GLUT and the window settings. Also, defines the callback functions used in the program.
 def main():
+    global n1
+    global pathAtoB
+
+    n1 = int(input('Nó de origem: '))
+    #pathAtoB.append(n1)
+    dijkstra(mygraph.GrafoWeights, n1)
+
+    print("Pressione 'h' para definir um nó destino e ver o caminho.")
 
     glut.glutInit()
     glut.glutInitContextVersion(3, 3)
@@ -308,6 +370,8 @@ def main():
     glut.glutInitWindowSize(win_width,win_height)
     glut.glutCreateWindow('Dijkstra 3D')
 
+    
+    
     # Init vertex data for the triangle.
     initData()
     

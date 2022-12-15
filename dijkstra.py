@@ -242,7 +242,11 @@ def reshape(width,height):
 
     win_width = width
     win_height = height
-    gl.glViewport(0, 0, width, height)
+    # viewport centralizado, aspecto 1:1
+    if(height > width):
+        gl.glViewport(0, int((height-width)/2), width, width)
+    else:
+        gl.glViewport(int((width-height)/2), 0, height, height)
     glut.glutPostRedisplay()
 
 rotate_inc_x = 0.0

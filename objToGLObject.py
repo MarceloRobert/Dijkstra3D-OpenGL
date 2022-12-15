@@ -66,14 +66,15 @@ def mutateObject(filename):
     # Save edge length into file
     destino.write("\nGrafoMeshLen = " + str(len(edges)*2) + "\n")
 
-    # Adjacency Matrix
+    ## Adjacency Matrix
     destino.write("\nGrafoWeights = [\n")
     adjacency = []
-    # Calculates it
+    # Initialization
     for i in range(0, verticesQt):
         adjacency.append([])
         for j in range(0, verticesQt):
             adjacency[i].append(0)
+    # Calculates the adjacency
     for i in range(0, edgesQt):
         varweight = weight(vertices, edges[i][0], edges[i][1])
         adjacency[edges[i][0]][edges[i][1]] = varweight

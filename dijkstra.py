@@ -232,14 +232,6 @@ def display():
     glut.glutSwapBuffers()
 
 
-
-## Idle function.
-#
-def idle():
-
-
-    glut.glutPostRedisplay()
-
 ## Reshape function.
 # 
 # Called when window is resized.
@@ -442,7 +434,6 @@ def main():
     glut.glutReshapeFunc(reshape)
     glut.glutDisplayFunc(display)
     glut.glutKeyboardFunc(keyboard)
-    glut.glutIdleFunc(idle)
 
     glut.glutMainLoop()
 

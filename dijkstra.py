@@ -22,8 +22,6 @@ graphVAO = None
 graphVBO = None
 graphEBO = None
 
-rotate_amount = 0
-
 ## Vertex shader.
 vertex_code = """
 #version 330 core
@@ -274,13 +272,15 @@ def keyboard(key, x, y):
     global endNode
     global caminhoNode
     global currentNode
+
     global rotate_inc_x
     global rotate_inc_y
     global rotate_inc_z
     global scale_inc
     global zoom
+
     global flagDijkstra
-    global rotate_amount
+    global graphSize
 
     if key == b'\x1b':
         glut.glutLeaveMainLoop()
@@ -304,10 +304,11 @@ def keyboard(key, x, y):
         rotate_inc_z -= 2
     
     if key == b'i':
-        scale_inc += 0.5
+        scale_inc += 0.25
     
     if key == b'o':
-        scale_inc -= 0.5
+        if scale_inc > 0:
+            scale_inc -= 0.25
     
     if key == b'm':
         zoom += 2
@@ -320,16 +321,24 @@ def keyboard(key, x, y):
         currentNode = 0
         caminhoNode.clear()
         startNode = int(input('Nó de origem: '))
-        dijkstra(mygraph.GrafoWeights, startNode)
+        if startNode < 0 or startNode >= graphSize:
+            print("Índice fora dos limites do grafo")
+            print("Maior índice possível: ", graphSize-1)
+        else:
+            dijkstra(mygraph.GrafoWeights, startNode)
 
-        endNode = int(input('Nó de destino: '))
-        printPath(endNode)
+            endNode = int(input('Nó de destino: '))
+            if endNode < 0 or endNode >= graphSize:
+                print("Índice fora dos limites do grafo")
+                print("Maior índice possível: ", graphSize-1)
+            else:
+                printPath(endNode)
 
-        print("Caminho da origem até destinho:")
-        print(pathAtoB)
+                print("Caminho da origem até destinho:")
+                print(pathAtoB)
 
-        flagDijkstra = True
-        display()
+                flagDijkstra = True
+                display()
     
     if key == b'p':
         if flagDijkstra:

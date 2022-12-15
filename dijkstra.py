@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-## @file phong.py
-#  Applies the Phong method.
-# 
-# @author Ricardo Dutra da Silva
-
-
-import sys
-import ctypes
 import numpy as np
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
@@ -31,6 +21,8 @@ instanceVBO = None
 graphVAO = None
 graphVBO = None
 graphEBO = None
+
+rotate_amount = 0
 
 ## Vertex shader.
 vertex_code = """
@@ -91,13 +83,11 @@ void main()
 """
 
 startNode = 0
-currentNode = 1
-endNode = 2
+currentNode = 0
+endNode = 0
 caminhoNode = []
 pathAtoB = []
-n1 = 0
-n2 = 0
-flag = False
+flagDijkstra = False
 
 def dijkstra(graph, start):
     
@@ -132,11 +122,10 @@ def dijkstra(graph, start):
 
 # Print do caminho
 def printPath(j):
-    global n1
     global pathAtoB
 
     pathAtoB.clear()
-    pathAtoB.append(n1)
+    pathAtoB.append(startNode)
 
     if parents[j] == -1:
         return
@@ -153,13 +142,15 @@ def display():
     global currentNode
     global endNode
     global caminhoNode
-    global rotate_inc
-    global flag
-    global n1
-    global n2
+    global rotate_inc_x
+    global rotate_inc_y
+    global rotate_inc_z
+    global scale_inc
+    global zoom
+    global flagDijkstra
     global pathAtoB
 
-    gl.glClearColor(0.1, 0.1, 0.3, 1.0)
+    gl.glClearColor(0, 0, 0, 1.0)
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     gl.glUseProgram(program)
 
@@ -169,13 +160,19 @@ def display():
     ## Para o vertex shader:
     ## Camera settings:
 
-    Rx = ut.matRotateX(np.radians(0.0+rotate_inc))
+    
+    Rx = ut.matRotateX(np.radians(0.0+rotate_inc_x))
+    Ry = ut.matRotateY(np.radians(0.0+rotate_inc_y))
+    Rz = ut.matRotateZ(np.radians(0.0+rotate_inc_z))
     Mz = ut.matTranslate(0.0, 0.0, -10.0)
+
     view = np.matmul(Mz, Rx)
+    view = np.matmul(view, Ry)
+    view = np.matmul(view, Rz)
     loc = gl.glGetUniformLocation(program, "view")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, view.transpose())
     
-    projection = ut.matPerspective(np.radians(45.0), win_width/win_height, 0.1, 100.0)
+    projection = ut.matPerspective(np.radians(zoom), win_width/win_height, 0.1, 100.0)
     loc = gl.glGetUniformLocation(program, "projection")
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, projection.transpose())
 
@@ -186,7 +183,7 @@ def display():
     gl.glUniform3f(loc, 1.0, 1.0, 1.0)
     # Light position.
     loc = gl.glGetUniformLocation(program, "lightPosition")
-    gl.glUniform3f(loc, 1.0, 0.0, 2.0)
+    gl.glUniform3f(loc, 5.0, 5.0, 30.0)
     # Camera position for the shader.
     loc = gl.glGetUniformLocation(program, "cameraPosition")
     gl.glUniform3f(loc, 0.0, 0.0, -5.0)
@@ -196,26 +193,31 @@ def display():
         # Object pos:
         # transforma cada instância para a posição no grafo
         transformer = ut.matTranslate(graphPos[i][0], graphPos[i][1], graphPos[i][2])
+        Sg = ut.matScale(scale_inc, scale_inc, scale_inc)
+        transformer = np.matmul(transformer, Sg)
         loc = gl.glGetUniformLocation(program, "model")
         gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, transformer.transpose())
 
         # Object color:
         # obtém a cor dependendo de qual tipo de nó é. (inicial, atual, final, outro)
         loc = gl.glGetUniformLocation(program, "objectColor")
-        gl.glUniform3f(loc, 0.5, 0.5, 0.1)
 
-        if(flag):
-            if i == n1:
+        if flagDijkstra:
+            if i == startNode:
                 gl.glUniform3f(loc, 0.1, 0.5, 0.1)
-            # elif i == currentNode:
-                # gl.glUniform3f(loc, 0.1, 0.1, 0.5)
-            elif i == n2:
+            elif i == endNode:
                 gl.glUniform3f(loc, 0.5, 0.1, 0.1)
+            elif i == pathAtoB[currentNode]:
+                gl.glUniform3f(loc, 0.1, 0.1, 0.5)
             elif i in caminhoNode:
                 gl.glUniform3f(loc, 0.5, 0.1, 0.5)
-            
+            else:
+                gl.glUniform3f(loc, 0.5, 0.5, 0.1)
+        else:
+            gl.glUniform3f(loc, 0.5, 0.5, 0.1)
 
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 20*3)
+    gl.glUniform3f(loc, 1, 1, 1) # reseta a cor para amarelo
     
 
     # Desenha o grafo
@@ -227,18 +229,16 @@ def display():
     gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, model.transpose())
 
     gl.glLineWidth(5)
-    gl.glDrawArrays(gl.GL_LINES, 0, 49*4)
+    gl.glDrawArrays(gl.GL_LINES, 0, mygraph.GrafoMeshLen)
 
     glut.glutSwapBuffers()
 
 
-rotate_inc = 0.0
+
 ## Idle function.
 #
 def idle():
-    global rotate_inc
 
-    rotate_inc += 0.5
 
     glut.glutPostRedisplay()
 
@@ -255,6 +255,11 @@ def reshape(width,height):
     gl.glViewport(0, 0, width, height)
     glut.glutPostRedisplay()
 
+rotate_inc_x = 0.0
+rotate_inc_y = 0.0
+rotate_inc_z = 0.0
+scale_inc = 1.0
+zoom = 45.0
 
 ## Keyboard function.
 #
@@ -265,33 +270,73 @@ def reshape(width,height):
 # @param y Mouse y coordinate when key pressed.
 def keyboard(key, x, y):
 
+    global startNode
+    global endNode
     global caminhoNode
     global currentNode
-    global rotate_inc
-    global n1
-    global n2
-    global flag
+    global rotate_inc_x
+    global rotate_inc_y
+    global rotate_inc_z
+    global scale_inc
+    global zoom
+    global flagDijkstra
+    global rotate_amount
 
-    if key == b'\x1b'or key == b'q':
+    if key == b'\x1b':
         glut.glutLeaveMainLoop()
-    if key == b'd':
-        rotate_inc += 1
+        
     if key == b'a':
-        rotate_inc -= 1
+        rotate_inc_y -= 2
+
+    if key == b'd':
+        rotate_inc_y += 2
+
+    if key == b'w':
+        rotate_inc_x += 2
+
+    if key == b's':
+        rotate_inc_x -= 2
+
+    if key == b'e':
+        rotate_inc_z += 2
+
+    if key == b'q':
+        rotate_inc_z -= 2
+    
+    if key == b'i':
+        scale_inc += 0.5
+    
+    if key == b'o':
+        scale_inc -= 0.5
+    
+    if key == b'm':
+        zoom += 2
+    
+    if key == b'n':
+        if zoom >= 0:
+            zoom -= 2
+
     if key == b'h':
-        n1 = int(input('Nó de origem: '))
-        dijkstra(mygraph.GrafoWeights, n1)
+        currentNode = 0
+        caminhoNode.clear()
+        startNode = int(input('Nó de origem: '))
+        dijkstra(mygraph.GrafoWeights, startNode)
 
-        n2 = int(input('Nó de destino: '))
-        printPath(n2)
+        endNode = int(input('Nó de destino: '))
+        printPath(endNode)
 
-        print("(Falta animar essa parte)")
         print("Caminho da origem até destinho:")
         print(pathAtoB)
-        caminhoNode = pathAtoB
 
-        flag = True
+        flagDijkstra = True
         display()
+    
+    if key == b'p':
+        if flagDijkstra:
+            if currentNode < len(pathAtoB)-1:
+                caminhoNode.append(pathAtoB[currentNode])
+                currentNode += 1
+
 
     glut.glutPostRedisplay()
 
@@ -318,7 +363,6 @@ def initData():
 
     graphSize = mygraph.GrafoLen
     graphPos = mygraph.GrafoPos
-    graphWeights = mygraph.GrafoWeights
     graphMesh = mygraph.GrafoMesh
 
     graphVAO = gl.glGenVertexArrays(1)
@@ -379,8 +423,6 @@ def main():
     glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
     glut.glutInitWindowSize(win_width,win_height)
     glut.glutCreateWindow('Dijkstra 3D')
-
-    
     
     # Init vertex data for the triangle.
     initData()

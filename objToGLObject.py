@@ -1,7 +1,7 @@
 from math import sqrt
 
 def mutateObject(filename):
-    origem = open("pasta/" + filename)
+    origem = open("objetos/" + filename)
     destino = open("graph.py", "w")
     
     destino.write("import numpy as np\n\n")
@@ -101,4 +101,4 @@ def weight(vertices, vertexid1, vertexid2):
     return sqrt(dz*dz + dy*dy + dx*dx)
 
 if __name__ == "__main__":
-    mutateObject("arvore.obj")
+    mutateObject("montanha.obj")

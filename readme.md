@@ -24,6 +24,14 @@ OBS: Caso o PIP esteja desatualizado, use o seguinte comando para atualizar:
 
 - $ python -m pip install --upgrade pip
 
+É necessário que as bibliotecas e arquivos locais estejam presentes no mesmo diretório do programa principal, estes arquivos são:
+
+- graph.py
+- objects.py
+- utils.py
+
+Para a transformação de um objeto para o grafo do programa, é necessário o arquivo "objToGLObject.py", e a pasta "objetos" com os objetos dentro.
+
 Assim que todos os pacotes estiverem instalados, basta executar o seguinte comando no local do programa.
 
 - $ python3 dijkstra.py
